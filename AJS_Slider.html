@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>Swipe Widget - 4.15</title>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.15/esri/themes/dark/main.css" />
+    <script>
+        window.dojoConfig = {
+            packages: [{
+                name: "vue",
+                location: "https://unpkg.com/vue/dist/",
+                main: "vue"
+            }]
+        };
+    </script>
+    <script src="https://js.arcgis.com/4.13/"></script>
+    <style>
+        html,
+        body,
+        #viewDiv {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+
+        #info {
+            margin: 15px;
+            padding: 15px;
+        }
+    </style>
+
+    <script>
+        require([
+            "esri/Map",
+            "esri/views/MapView",
+            "esri/geometry/Extent",
+            "esri/layers/FeatureLayer",
+            "esri/widgets/LayerList",
+            "esri/widgets/Swipe",
+            "esri/widgets/Expand",
+            "esri/Basemap",
+            "esri/core/watchUtils",
+            "esri/layers/MapImageLayer",
+            "esri/layers/VectorTileLayer",
+            "vue"
+        ], function (Map, MapView, Extent, FeatureLayer, LayerList, Swipe, Expand, Basemap, watchUtils,
+            MapImageLayer, VectorTileLayer, Vue) {
+
+            const ext = new Extent({
+                spatialReference: {
+                    "latestWkid": 3857,
+                    "wkid": 102100
+                },
+                xmax: 2127653.5451233946,
+                xmin: 2091476.5575694193,
+                ymax: 10969047.664523348,
+                ymin: 10954874.842577703,
+            })
+
+            const bakgrunnVektor = new VectorTileLayer({
+                // URL to the style of vector tiles
+                url: "https://services.geodataonline.no/arcgis/rest/services/GeocacheVector/GeocacheKanvasMork_WM/VectorTileServer"
+            });
+
+            const TrafikkMengde2020 = new FeatureLayer({
+                url: "https://services1.arcgis.com/oc32TmBcUxTXagmW/arcgis/rest/services/trafikkmengde2020_WFL1/FeatureServer/1?token=WYqpM8-IqwpZPUfYC0K9I8-J6yoQp6flIOQn91z1Sxo4zNmv-W2KNRRJIPxmQwhU77PZi-BW-LUysAFDa9kQliwfJZBxVe0WQ61g4A0rhZJNCznp7quPSdg7bHfqwGesaJsSlk4ChcuQ5lqqcEv45PjfDfgGuB6Pnp4C6Jg7n4n4NCQl_iSJVcCeor2L77_EsMuCDbMvaKGRxF1LNoBKn1fNc5ki3wIzhT23_N8CAPjWzrYnL1fM7RP3r5vMXeqs",
+                // maxScale: 100,
+            });
+
+            const Rund = new FeatureLayer({
+                url: "https://services1.arcgis.com/oc32TmBcUxTXagmW/arcgis/rest/services/trafikkmengde2020_WFL1/FeatureServer/0?token=WYqpM8-IqwpZPUfYC0K9I8-J6yoQp6flIOQn91z1Sxo4zNmv-W2KNRRJIPxmQwhU77PZi-BW-LUysAFDa9kQliwfJZBxVe0WQ61g4A0rhZJNCznp7quPSdg7bHfqwGesaJsSlk4ChcuQ5lqqcEv45PjfDfgGuB6Pnp4C6Jg7n4n4NCQl_iSJVcCeor2L77_EsMuCDbMvaKGRxF1LNoBKn1fNc5ki3wIzhT23_N8CAPjWzrYnL1fM7RP3r5vMXeqs",
+                // maxScale: 100,
+            });
+
+            const flybilder = new MapImageLayer({
+                url: "https://services.geodataonline.no/arcgis/rest/services/Geocache_UTM33_EUREF89/GeocacheGraatone/MapServer"
+            });
+
+            // const Vegsenter = new FeatureLayer({
+            //     url: "https://services1.arcgis.com/oc32TmBcUxTXagmW/arcgis/rest/services/trafikkmengde2020_WFL1/FeatureServer/2?token=WYqpM8-IqwpZPUfYC0K9I8-J6yoQp6flIOQn91z1Sxo4zNmv-W2KNRRJIPxmQwhU77PZi-BW-LUysAFDa9kQliwfJZBxVe0WQ61g4A0rhZJNCznp7quPSdg7bHfqwGesaJsSlk4ChcuQ5lqqcEv45PjfDfgGuB6Pnp4C6Jg7n4n4NCQl_iSJVcCeor2L77_EsMuCDbMvaKGRxF1LNoBKn1fNc5ki3wIzhT23_N8CAPjWzrYnL1fM7RP3r5vMXeqs",
+            //     // maxScale: 100,
+            // });
+
+            const Bygninger = new FeatureLayer({
+                url: "https://services1.arcgis.com/oc32TmBcUxTXagmW/arcgis/rest/services/trafikkmengde2020_WFL1/FeatureServer/3?token=WYqpM8-IqwpZPUfYC0K9I8-J6yoQp6flIOQn91z1Sxo4zNmv-W2KNRRJIPxmQwhU77PZi-BW-LUysAFDa9kQliwfJZBxVe0WQ61g4A0rhZJNCznp7quPSdg7bHfqwGesaJsSlk4ChcuQ5lqqcEv45PjfDfgGuB6Pnp4C6Jg7n4n4NCQl_iSJVcCeor2L77_EsMuCDbMvaKGRxF1LNoBKn1fNc5ki3wIzhT23_N8CAPjWzrYnL1fM7RP3r5vMXeqs",
+                maxScale: 30000,
+                minScale: 150000,
+            });
+
+            // const Areal = new FeatureLayer({
+            //     url: "https://services1.arcgis.com/oc32TmBcUxTXagmW/arcgis/rest/services/trafikkmengde2020_WFL1/FeatureServer/4?token=WYqpM8-IqwpZPUfYC0K9I8-J6yoQp6flIOQn91z1Sxo4zNmv-W2KNRRJIPxmQwhU77PZi-BW-LUysAFDa9kQliwfJZBxVe0WQ61g4A0rhZJNCznp7quPSdg7bHfqwGesaJsSlk4ChcuQ5lqqcEv45PjfDfgGuB6Pnp4C6Jg7n4n4NCQl_iSJVcCeor2L77_EsMuCDbMvaKGRxF1LNoBKn1fNc5ki3wIzhT23_N8CAPjWzrYnL1fM7RP3r5vMXeqs",
+            //     // maxScale: 100,
+            // });
+
+            const bakgrunnskart = new Basemap({
+                baseLayers: [bakgrunnVektor],
+                // baseLayers: [flybilder]
+            })
+
+            // map.add(Areal);
+            // map.add(Bygninger);
+            // map.add(Vegsenter);
+
+
+            const TrafikkMengde2030 = new FeatureLayer({
+                url: "https://services1.arcgis.com/oc32TmBcUxTXagmW/arcgis/rest/services/Trafikkmengder_2020_og_2030_WFL1/FeatureServer/4",
+                // maxScale: 100,
+            });
+
+            const rund2030 = new FeatureLayer({
+                url: "https://services1.arcgis.com/oc32TmBcUxTXagmW/arcgis/rest/services/Trafikkmengder_2020_og_2030_WFL1/FeatureServer/3",
+                // maxScale: 100,
+            });
+
+
+
+            const map = new Map({
+                basemap: bakgrunnskart,
+                // basemap: "dark-gray"
+
+            });
+
+            map.addMany([TrafikkMengde2020, rund2030, TrafikkMengde2030, Rund, Bygninger])
+
+            const view = new MapView({
+                container: "viewDiv",
+                map: map,
+                extent: ext,
+                // zoom: 14,
+                // center: [10963794.933143528, 2108619.5592725165], // longitude, latitude
+                constraints: {
+                    maxZoom: 17,
+                    minZoom: 10,
+                    rotationEnabled: false,
+                    // snapToZoom: false,
+                },
+            });
+
+            // Create a Vue component
+            Vue.component("camera-info", {
+                props: ["zoom", "pointer", "scale"],
+                template: [
+                    "<div>",
+                    "<h2>Camera Details</h2>",
+                    "<p>Scale: {{ scale }}</p>",
+                    "<p><strong>Zoom</strong>: {{ zoom }}</p>",
+                    "<p>Peker X: {{ pointer.x }}</p>",
+                    "<p>Peker Y: {{ pointer.y }}</p>",
+
+                    "</div>"
+                ].join(""),
+                methods: {}
+            });
+            view.when(function () {
+                const info = new Vue({
+                    el: "#info",
+                    data: {
+                        zoom: view.zoom,
+                        scale: 0,
+                        pointer: {
+                            x: 0,
+                            y: 0
+                        },
+                        synlig: false,
+                    }
+                });
+                view.ui.add(info.$el, "top-right");
+                // watchUtils.watch(view, "center", function () {
+                //     console.log(view.zoom, "Zoom");
+
+                //     info.zoom = view.zoom;
+                // });
+
+                view.on("click", function (evt) {
+                    // punkt = {
+                    //     x: view.toMap(evt.x),
+                    //     y: view.toMap(evt.y)
+                    // }
+                    console.log("move", view.toMap(evt));
+                    console.log(view.extent, "Extent");
+
+                    info.synlig = !info.synlig;
+
+
+                    info.pointer = view.toMap(evt);
+                    info.zoom = view.zoom;
+                    info.scale = view.scale;
+
+                    console.log(info.extent);
+
+                })
+            });
+            // console.log(view.zoom, "Zoomnivå");
+
+
+
+
+            // create a layerlist and expand widget and add to the view
+            const layerList = new LayerList({
+                view: view,
+            });
+
+
+            const llExpand = new Expand({
+                view: view,
+                content: layerList,
+                expanded: false,
+            });
+
+            view.watch("zoom", function (obj) {
+                console.log(obj);
+                console.log("Helvetes");
+            })
+
+            view.ui.add(llExpand, "top-right");
+
+            // create a new Swipe widget
+            const swipe = new Swipe({
+                leadingLayers: [TrafikkMengde2020, Rund],
+                trailingLayers: [TrafikkMengde2030, rund2030],
+                position: 50, // set position of widget to 50%
+                view: view,
+            });
+
+            console.log(view);
+
+
+            // add the widget to the view
+            view.ui.add(swipe);
+        });
+    </script>
+</head>
+
+<body>
+    <div id="info" class="esri-widget">
+        <camera-info v-if="synlig" v-bind:zoom="zoom" v-bind:pointer="pointer"></camera-info>
+    </div>
+    <div id="viewDiv"></div>
+
+
+</body>
+
+</html>
